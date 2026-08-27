@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nerd Bump Quiz – Outquizzed-inspiriert</title>
+<style>
+:root{
+  --bg:#0b1020; --panel:#151c33; --panel2:#1d2746; --text:#f7f8ff; --muted:#9ea9c9;
+  --accent:#7cf7c8; --accent2:#8ba7ff; --danger:#ff6b81; --warn:#ffd166; --ok:#67e480;
+  --shadow:0 18px 55px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% 0,#18244a 0,transparent 35%),var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+button,input{font:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:12px 16px;font-weight:800;background:var(--accent);color:#08131a;transition:.18s transform,.18s opacity}
+button:hover{transform:translateY(-1px)}
+button.secondary{background:var(--panel2);color:var(--text);border:1px solid #344267}
+button.danger{background:var(--danger);color:white}
+button.warn{background:var(--warn);color:#2a1d00}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.wrap{max-width:1100px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:22px}
+.brand{font-size:clamp(26px,4vw,44px);font-weight:950;letter-spacing:-1.5px}
+.brand span{color:var(--accent)}
+.small{color:var(--muted);font-size:13px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.03),transparent),var(--panel);border:1px solid #263354;border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:800px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
+.player-inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:600px){.player-inputs{grid-template-columns:1fr}}
+input{width:100%;background:#0c1328;color:white;border:1px solid #344267;border-radius:10px;padding:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.queue{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.pill{padding:9px 12px;border-radius:999px;background:#0f1730;border:1px solid #344267;font-weight:700}
+.pill.active{outline:2px solid var(--accent);background:#152b2a}
+.pill.vulnerable{outline:2px solid var(--danger);background:#351924}
+.pill.out{opacity:.35;text-decoration:line-through}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#253154;color:#cbd5ff;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.7px}
+.qbox{min-height:180px;display:flex;flex-direction:column;justify-content:center}
+.question{font-size:clamp(22px,3vw,34px);font-weight:900;line-height:1.2;margin:12px 0}
+.answer{margin-top:14px;padding:14px 16px;background:#0e1730;border-left:4px solid var(--accent);border-radius:10px;font-size:18px}
+.hidden{display:none!important}
+.status{font-weight:800;margin:8px 0 0}
+.status.warn{color:var(--warn)} .status.danger{color:var(--danger)} .status.ok{color:var(--ok)}
+.log{max-height:250px;overflow:auto;background:#0c1328;border-radius:12px;padding:12px}
+.log div{padding:7px 4px;border-bottom:1px solid #1d2949;color:#ccd4ef;font-size:14px}
+.log div:last-child{border-bottom:0}
+.progress{height:8px;background:#0c1328;border-radius:999px;overflow:hidden;margin-top:10px}
+.progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0}
+.score{font-size:30px;font-weight:950}
+hr{border:0;border-top:1px solid #2a375b;margin:18px 0}
+.rules li{margin:8px 0;color:#cbd3ee}
+.footer{margin:18px 0;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="brand">NERD <span>BUMP QUIZ</span></div>
+    <div class="small">Eine eigenständige, OUTQUIZZED-inspirierte Quiz-Umsetzung für lokale Spielrunden</div>
+  </div>
+  <button class="secondary" id="resetBtn">↻ Neues Spiel</button>
+</header>
+
+<section id="setup" class="card">
+  <h2>Spiel vorbereiten</h2>
+  <p class="small">Ideal mit 5 Personen. Drei Vorrunden eliminieren je eine Person; die letzten zwei spielen das Finale.</p>
+  <div class="player-inputs" id="playerInputs"></div>
+  <div class="row" style="margin-top:16px">
+    <button id="startBtn">Spiel starten</button>
+    <button class="secondary" id="shuffleNamesBtn">Reihenfolge mischen</button>
+  </div>
+  <hr>
+  <details>
+    <summary><b>Regeln dieser Browser-Version</b></summary>
+    <ol class="rules">
+      <li>Die aktive Person bekommt eine offene Frage. Der Moderator deckt bei Bedarf die Lösung auf und entscheidet „Richtig“ oder „Falsch“.</li>
+      <li>Bei <b>Falsch</b> wird diese Person zum Wackelkandidaten. Die nächste Person bekommt <b>dieselbe Frage</b>.</li>
+      <li>Antwortet die nächste Person <b>richtig</b>, wird der Wackelkandidat aus dieser Runde gebumpt. Antwortet sie ebenfalls falsch, wandert die Gefahr weiter: Sie wird neuer Wackelkandidat und es kommt eine neue Frage.</li>
+      <li>Nach jeder Eliminierung startet die nächste Vorrunde mit den übrigen Personen in neu gemischter Reihenfolge.</li>
+      <li>Nach drei Eliminierungen spielen die letzten zwei ein Finale: Wer zuerst <b>3 Punkte</b> erreicht, gewinnt.</li>
+    </ol>
+  </details>
+</section>
+
+<section id="game" class="hidden">
+  <div class="grid">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><span class="badge" id="roundBadge">Vorrunde 1</span></div>
+        <div class="small"><span id="usedCount">0</span>/100 Fragen verwendet</div>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div class="queue" id="queue"></div>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+      <div class="small">Aktiv</div>
+      <div class="score" id="activeName">–</div>
+      <div class="small" id="modeInfo">Vorrunde</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="qbox">
+      <span class="badge" id="categoryBadge">Kategorie</span>
+      <div class="question" id="questionText">Frage wird geladen …</div>
+      <div id="answerBox" class="answer hidden"></div>
+    </div>
+    <div class="row">
+      <button class="secondary" id="revealBtn">Antwort aufdecken</button>
+      <button id="correctBtn">✓ Richtig</button>
+      <button class="danger" id="wrongBtn">✕ Falsch</button>
+      <button class="secondary" id="skipBtn">Frage überspringen</button>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:18px">
+    <div class="card">
+      <h3>Spielstand</h3>
+      <div id="scores"></div>
+    </div>
+    <div class="card">
+      <h3>Verlauf</h3>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</section>
+
+<section id="winner" class="card hidden" style="text-align:center">
+  <div style="font-size:72px">🏆</div>
+  <h1 id="winnerText"></h1>
+  <p id="winnerSub" class="small"></p>
+  <button id="againBtn">Noch eine Runde</button>
+</section>
+
+<div class="footer">Komplett offline · Keine externen Bibliotheken · 100 integrierte Nerd-Fragen</div>
+</div>
+
+<script>
+const QUESTIONS = [{"cat": "Gaming", "q": "Wie heißt Links Heimatkönigreich in „The Legend of Zelda“?", "a": "Hyrule"}, {"cat": "Gaming", "q": "Welche Firma entwickelte die ursprüngliche „Half-Life“-Reihe?", "a": "Valve"}, {"cat": "Gaming", "q": "Wie heißt die KI, die in „Portal“ die Testkammern überwacht?", "a": "GLaDOS"}, {"cat": "Gaming", "q": "Welche Pokémon-Typen hat Glurak in seiner normalen Form?", "a": "Feuer und Flug"}, {"cat": "Gaming", "q": "Wie heißt der Kontinent, auf dem „The Elder Scrolls V: Skyrim“ größtenteils spielt?", "a": "Tamriel (Region: Himmelsrand/Skyrim)"}, {"cat": "Gaming", "q": "Wie viele Triforce-Fragmente bzw. -Aspekte gibt es klassisch?", "a": "Drei: Kraft, Weisheit und Mut"}, {"cat": "Gaming", "q": "Welches Studio entwickelte „The Witcher 3: Wild Hunt“?", "a": "CD Projekt Red"}, {"cat": "Gaming", "q": "Wie heißt die Stadt, in der „BioShock Infinite“ spielt?", "a": "Columbia"}, {"cat": "Gaming", "q": "Welchen Beruf hat Gordon Freeman in „Half-Life“?", "a": "Theoretischer Physiker"}, {"cat": "Gaming", "q": "Wie heißt die Hauptfigur der „Metroid“-Reihe?", "a": "Samus Aran"}, {"cat": "Gaming", "q": "Welche Ressource braucht man in „Minecraft“, um standardmäßig ein Netherportal zu bauen?", "a": "Obsidian"}, {"cat": "Gaming", "q": "Wie heißt das Schwert von Cloud Strife in „Final Fantasy VII“ auf Deutsch/Englisch?", "a": "Panzerschwert / Buster Sword"}, {"cat": "Gaming", "q": "Welche Farbe hat Pac-Man?", "a": "Gelb"}, {"cat": "Gaming", "q": "Wie heißt der Bruder von Mario?", "a": "Luigi"}, {"cat": "Gaming", "q": "In welcher Spielereihe kämpft man als Commander Shepard?", "a": "Mass Effect"}, {"cat": "Gaming", "q": "Wie heißt die Welt, in der die meisten „Dark Souls“-Ereignisse des ersten Teils stattfinden?", "a": "Lordran"}, {"cat": "Gaming", "q": "Welche Firma veröffentlichte die erste PlayStation?", "a": "Sony"}, {"cat": "Gaming", "q": "Wie heißt der Protagonist von „God of War“?", "a": "Kratos"}, {"cat": "Gaming", "q": "Wie heißt die fiktive Firma hinter den Zombies in „Resident Evil“?", "a": "Umbrella Corporation"}, {"cat": "Gaming", "q": "Welche zwei Portal-Farben benutzt Chell in „Portal“?", "a": "Blau und Orange"}, {"cat": "Gaming", "q": "Wie heißt das Battle-Royale-Spiel von Respawn Entertainment im Titanfall-Universum?", "a": "Apex Legends"}, {"cat": "Gaming", "q": "Wie heißt die Archäologin und Heldin der „Tomb Raider“-Reihe?", "a": "Lara Croft"}, {"cat": "Gaming", "q": "Welche Zahl trägt Vault Boy auf dem klassischen blauen „Fallout“-Anzug häufig?", "a": "Die Zahl variiert je nach Vault; der ikonische Spieleranzug in Fallout 3 trägt 101"}, {"cat": "Gaming", "q": "Wie heißt der Erzfeind von Sonic the Hedgehog?", "a": "Dr. Eggman / Dr. Robotnik"}, {"cat": "Gaming", "q": "Welche Firma entwickelte „Baldur’s Gate 3“?", "a": "Larian Studios"}, {"cat": "Brettspiele", "q": "Wie viele Rohstoffarten gibt es im Grundspiel von „CATAN“?", "a": "Fünf: Holz, Lehm, Wolle, Getreide und Erz"}, {"cat": "Brettspiele", "q": "Wie viele Siegpunkte braucht man im CATAN-Grundspiel normalerweise zum Sieg?", "a": "10"}, {"cat": "Brettspiele", "q": "Welche Krankheit muss man in „Pandemic“ gemeinsam bekämpfen?", "a": "Vier verschiedene Seuchen/Krankheiten; es gibt nicht nur eine einzelne"}, {"cat": "Brettspiele", "q": "Wie heißt der Kontinent, den man in „Spirit Island“ gegen Invasoren verteidigt?", "a": "Eine namenlose/übernatürliche Insel – das Spiel nennt sie schlicht die Insel"}, {"cat": "Brettspiele", "q": "Wie viele Farben haben die Eisenbahnwagenkarten im Grundspiel von „Zug um Zug“ zusätzlich zu Lokomotiven?", "a": "Acht Farben"}, {"cat": "Brettspiele", "q": "Welches Brettspiel dreht sich um den Bau einer mittelalterlichen Landschaft aus Plättchen?", "a": "Carcassonne"}, {"cat": "Brettspiele", "q": "Wie heißen die kleinen Holzfiguren in „Carcassonne“ umgangssprachlich?", "a": "Meeple"}, {"cat": "Brettspiele", "q": "Wer entwarf das Brettspiel „7 Wonders“?", "a": "Antoine Bauza"}, {"cat": "Brettspiele", "q": "Welches Spiel von Uwe Rosenberg dreht sich um Landwirtschaft, Felder und Familienmitglieder?", "a": "Agricola"}, {"cat": "Brettspiele", "q": "Wie heißt der Mechanismus, bei dem Spieler reihum Figuren auf Aktionsfelder setzen, etwa in „Agricola“?", "a": "Worker Placement / Arbeitereinsatz"}, {"cat": "Brettspiele", "q": "Wie viele verschiedene Schachfiguren-Typen besitzt jede Seite?", "a": "Sechs: König, Dame, Turm, Läufer, Springer, Bauer"}, {"cat": "Brettspiele", "q": "Wie viele Felder hat ein normales Schachbrett?", "a": "64"}, {"cat": "Brettspiele", "q": "Welche Figur darf beim Schach über andere Figuren springen?", "a": "Der Springer"}, {"cat": "Brettspiele", "q": "Wie heißt das Deduktionsspiel, bei dem man Täter, Tatwaffe und Tatort ermitteln muss?", "a": "Cluedo / Clue"}, {"cat": "Brettspiele", "q": "In welchem kooperativen Spiel versucht eine Gruppe, auf einer sinkenden Insel Schätze zu bergen?", "a": "Die verbotene Insel / Forbidden Island"}, {"cat": "Brettspiele", "q": "Wie heißt das Kartenspiel, bei dem Kartenfarben durch Zahlenwerte und Sonderkarten abgelegt werden und man bei einer letzten Karte einen Namen ruft?", "a": "UNO"}, {"cat": "Brettspiele", "q": "Wie viele Karten hält man zu Beginn einer klassischen UNO-Runde?", "a": "Sieben"}, {"cat": "Brettspiele", "q": "Welches Brettspiel simuliert den Kalten Krieg für zwei Personen mit Karten und Einfluss auf einer Weltkarte?", "a": "Twilight Struggle"}, {"cat": "Brettspiele", "q": "Wie heißt das asymmetrische Waldland-Strategiespiel von Leder Games mit Fraktionen wie Marquise de Katz und Waldland-Allianz?", "a": "Root"}, {"cat": "Brettspiele", "q": "Welches Deckbuilding-Spiel von Donald X. Vaccarino gilt als einer der großen Wegbereiter des Genres?", "a": "Dominion"}, {"cat": "Brettspiele", "q": "Wie heißt das kooperative Kartenspiel im Lovecraft-Universum von Fantasy Flight Games mit Kampagnen?", "a": "Arkham Horror: Das Kartenspiel"}, {"cat": "Brettspiele", "q": "Welches Brettspiel lässt Spieler farbige Fliesenmuster an den Wänden des portugiesischen Königspalasts legen?", "a": "Azul"}, {"cat": "Brettspiele", "q": "Wie heißt das Spiel, in dem man Vögel in Lebensräumen ansiedelt und Eier legt?", "a": "Flügelschlag / Wingspan"}, {"cat": "Brettspiele", "q": "Welcher Begriff beschreibt bei Brettspielen eine Aktion, die ein Gegner unmittelbar als Reaktion ausführt?", "a": "Reaktion / Interrupt; je nach Spiel auch Reaktionsaktion"}, {"cat": "Brettspiele", "q": "Wie heißt das klassische Brettspiel mit Straßen, Bahnhöfen, Gefängnis und Grundstückshandel?", "a": "Monopoly"}, {"cat": "Filme & Serien", "q": "Wie heißt das Raumschiff von Han Solo?", "a": "Millennium Falke / Millennium Falcon"}, {"cat": "Filme & Serien", "q": "Welcher Schauspieler spielte Neo in „Matrix“?", "a": "Keanu Reeves"}, {"cat": "Filme & Serien", "q": "Wie heißt der Planet, auf dem Luke Skywalker aufwächst?", "a": "Tatooine"}, {"cat": "Filme & Serien", "q": "Welche Farbe hat Mace Windus Lichtschwert?", "a": "Lila/Violett"}, {"cat": "Filme & Serien", "q": "Wie lautet Gandalfs Beiname nach seiner Rückkehr in „Der Herr der Ringe“?", "a": "Gandalf der Weiße"}, {"cat": "Filme & Serien", "q": "Wie heißt Aragorns Schwert nach seiner Neuschmiedung?", "a": "Andúril"}, {"cat": "Filme & Serien", "q": "Wie heißt der künstliche Mensch aus „Blade Runner“, den Harrison Ford spielt?", "a": "Rick Deckard ist ein Blade Runner; ob er selbst Replikant ist, bleibt absichtlich uneindeutig"}, {"cat": "Filme & Serien", "q": "Wie heißt das Hotel in Stanley Kubricks „The Shining“?", "a": "Overlook Hotel"}, {"cat": "Filme & Serien", "q": "Welcher Regisseur drehte „Jurassic Park“ von 1993?", "a": "Steven Spielberg"}, {"cat": "Filme & Serien", "q": "Wie heißt der Computer an Bord der Discovery One in „2001: Odyssee im Weltraum“?", "a": "HAL 9000"}, {"cat": "Filme & Serien", "q": "Welche Zahl trägt das Experiment Stitch in Disneys „Lilo & Stitch“?", "a": "626"}, {"cat": "Filme & Serien", "q": "Wie heißt die fiktive Firma, die den Park in „Jurassic World“ ursprünglich betreibt bzw. besitzt?", "a": "Masrani Global Corporation"}, {"cat": "Filme & Serien", "q": "Welcher Schauspieler spielte Tony Stark im Marvel Cinematic Universe?", "a": "Robert Downey Jr."}, {"cat": "Filme & Serien", "q": "Wie heißt Thors Hammer?", "a": "Mjölnir / Mjolnir"}, {"cat": "Filme & Serien", "q": "Welcher Infinity-Stein befindet sich lange in Visions Stirn?", "a": "Der Gedankenstein / Mind Stone"}, {"cat": "Filme & Serien", "q": "Wie heißt die Schule für Hexerei und Zauberei in „Harry Potter“?", "a": "Hogwarts"}, {"cat": "Filme & Serien", "q": "Welches Haus in „Game of Thrones“ führt den Wahlspruch „Der Winter naht“?", "a": "Haus Stark"}, {"cat": "Filme & Serien", "q": "Wie heißt der Kontinent westlich der Meerenge in „Game of Thrones“, auf dem Königsmund liegt?", "a": "Westeros"}, {"cat": "Filme & Serien", "q": "Wie heißt der Dimensionsriss bzw. die Parallelwelt in „Stranger Things“ auf Deutsch?", "a": "Die Schattenwelt / The Upside Down"}, {"cat": "Filme & Serien", "q": "Wer ist in „The Mandalorian“ unter Fans lange als „Baby Yoda“ bekannt?", "a": "Grogu"}, {"cat": "Filme & Serien", "q": "Wie heißt das Schiff der Crew in der Serie „Firefly“?", "a": "Serenity"}, {"cat": "Filme & Serien", "q": "In welcher Stadt arbeitet die Ghostbusters-Truppe hauptsächlich?", "a": "New York City"}, {"cat": "Filme & Serien", "q": "Wie heißt der Android in „Alien“ von 1979?", "a": "Ash"}, {"cat": "Filme & Serien", "q": "Welcher Regisseur drehte die „The Dark Knight“-Trilogie?", "a": "Christopher Nolan"}, {"cat": "Filme & Serien", "q": "Wie heißt der Archäologe, der in Filmen Peitsche und Fedora trägt?", "a": "Indiana Jones"}, {"cat": "Nerdmix", "q": "Wie heißt Batmans Heimatstadt?", "a": "Gotham City"}, {"cat": "Nerdmix", "q": "Wie lautet Supermans kryptonischer Name?", "a": "Kal-El"}, {"cat": "Nerdmix", "q": "Welche Zeitung beschäftigt Clark Kent?", "a": "Daily Planet"}, {"cat": "Nerdmix", "q": "Wie heißt Peter Parkers Tante?", "a": "May Parker / Tante May"}, {"cat": "Nerdmix", "q": "Welche Metalllegierung bedeckt Wolverines Skelett in den X-Men-Comics?", "a": "Adamantium"}, {"cat": "Nerdmix", "q": "Wie heißt der Heimatplanet der Klingonen in „Star Trek“?", "a": "Qo'noS / Kronos"}, {"cat": "Nerdmix", "q": "Welcher Offizier der Enterprise ist Vulkanier und für seine Logik berühmt?", "a": "Spock"}, {"cat": "Nerdmix", "q": "Wie heißt das klassische Pen-&-Paper-Rollenspiel von Gary Gygax und Dave Arneson?", "a": "Dungeons & Dragons"}, {"cat": "Nerdmix", "q": "Welchen Würfel meint die Abkürzung „W20“ bzw. „d20“?", "a": "Einen zwanzigseitigen Würfel"}, {"cat": "Nerdmix", "q": "Wie heißt in „Dungeons & Dragons“ die Spielleitung auf Englisch?", "a": "Dungeon Master (DM)"}, {"cat": "Nerdmix", "q": "Wer schrieb den Roman „Dune“?", "a": "Frank Herbert"}, {"cat": "Nerdmix", "q": "Wie heißt der Wüstenplanet in „Dune“?", "a": "Arrakis"}, {"cat": "Nerdmix", "q": "Welche Substanz ist in „Dune“ auch als Spice bekannt?", "a": "Melange"}, {"cat": "Nerdmix", "q": "Wer schrieb „Per Anhalter durch die Galaxis“?", "a": "Douglas Adams"}, {"cat": "Nerdmix", "q": "Welche Zahl ist laut „Per Anhalter durch die Galaxis“ die Antwort auf die Frage nach dem Leben, dem Universum und dem ganzen Rest?", "a": "42"}, {"cat": "Nerdmix", "q": "Wie heißt der Autor von „Neuromancer“?", "a": "William Gibson"}, {"cat": "Nerdmix", "q": "Welche drei klassischen Robotergesetze formulierte Isaac Asimov?", "a": "Roboter dürfen Menschen nicht verletzen; müssen Menschen gehorchen, sofern das Gesetz 1 nicht verletzt; müssen sich selbst schützen, sofern Gesetze 1 und 2 nicht verletzt werden"}, {"cat": "Nerdmix", "q": "Wofür steht die Abkürzung NPC im Gaming- und Rollenspielkontext?", "a": "Non-Player Character / Nichtspielercharakter"}, {"cat": "Nerdmix", "q": "Wofür steht „LAN“ in „LAN-Party“?", "a": "Local Area Network"}, {"cat": "Nerdmix", "q": "Welche Programmiersprache ist nach einer britischen Comedygruppe benannt?", "a": "Python (nach Monty Python)"}, {"cat": "Nerdmix", "q": "Was bedeutet die Abkürzung „HTTP“?", "a": "Hypertext Transfer Protocol"}, {"cat": "Nerdmix", "q": "Wie heißt die japanische Comicform?", "a": "Manga"}, {"cat": "Nerdmix", "q": "Wie heißt Son Gokus Heimatplanet in „Dragon Ball“?", "a": "Planet Vegeta"}, {"cat": "Nerdmix", "q": "Welches Symbol prangt klassisch auf der Brust von Superman?", "a": "Ein stilisiertes S im schild-/diamantförmigen Emblem"}, {"cat": "Nerdmix", "q": "Wie heißt das fiktive Metall aus Wakanda im Marvel-Universum?", "a": "Vibranium"}];
+
+const state = {
+  players: [],
+  round: 1,
+  active: 0,
+  vulnerable: null,
+  currentQ: null,
+  used: new Set(),
+  final: false,
+  finalScores: {},
+  lockedQuestion: false
+};
+
+const $ = s => document.querySelector(s);
+const els = {
+  setup:$("#setup"),game:$("#game"),winner:$("#winner"),playerInputs:$("#playerInputs"),
+  start:$("#startBtn"),queue:$("#queue"),active:$("#activeName"),cat:$("#categoryBadge"),
+  q:$("#questionText"),answer:$("#answerBox"),reveal:$("#revealBtn"),correct:$("#correctBtn"),
+  wrong:$("#wrongBtn"),skip:$("#skipBtn"),status:$("#status"),round:$("#roundBadge"),
+  scores:$("#scores"),log:$("#log"),used:$("#usedCount"),bar:$("#progressBar"),modeInfo:$("#modeInfo")
+};
+
+function setupInputs(){
+  els.playerInputs.innerHTML="";
+  for(let i=1;i<=5;i++){
+    const input=document.createElement("input");
+    input.placeholder=`Spieler ${i}`;
+    input.value=`Spieler ${i}`;
+    input.dataset.idx=i-1;
+    els.playerInputs.appendChild(input);
+  }
+}
+setupInputs();
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+$("#shuffleNamesBtn").onclick=()=>{
+  const inputs=[...els.playerInputs.querySelectorAll("input")];
+  const vals=shuffle(inputs.map(x=>x.value));
+  inputs.forEach((x,i)=>x.value=vals[i]);
+};
+
+function startGame(){
+  const names=[...els.playerInputs.querySelectorAll("input")].map(x=>x.value.trim()).filter(Boolean);
+  if(names.length<2){ alert("Bitte mindestens zwei Spielernamen eintragen."); return; }
+  state.players=names.map((name,i)=>({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+i),name,alive:true}));
+  state.round=1; state.active=0; state.vulnerable=null; state.used=new Set(); state.final=false; state.finalScores={};
+  els.log.innerHTML="";
+  els.setup.classList.add("hidden"); els.winner.classList.add("hidden"); els.game.classList.remove("hidden");
+  log(`Spiel startet mit ${names.join(", ")}.`);
+  nextQuestion(true); render();
+}
+
+function alivePlayers(){ return state.players.filter(p=>p.alive); }
+function activePlayer(){ const alive=alivePlayers(); return alive[state.active % alive.length]; }
+
+function drawQuestion(){
+  const available=QUESTIONS.map((_,i)=>i).filter(i=>!state.used.has(i));
+  if(!available.length){ state.used.clear(); log("Alle 100 Fragen gespielt – Fragenpool wurde zurückgesetzt."); return drawQuestion(); }
+  const idx=available[Math.floor(Math.random()*available.length)];
+  state.used.add(idx);
+  return QUESTIONS[idx];
+}
+function nextQuestion(forceNew=false){
+  if(forceNew || !state.lockedQuestion){
+    state.currentQ=drawQuestion();
+  }
+  state.lockedQuestion=false;
+  els.answer.classList.add("hidden");
+  renderQuestion();
+}
+function renderQuestion(){
+  els.cat.textContent=state.currentQ?.cat||"";
+  els.q.textContent=state.currentQ?.q||"";
+  els.answer.textContent="Antwort: "+(state.currentQ?.a||"");
+  els.used.textContent=state.used.size;
+  els.bar.style.width=(state.used.size)+"%";
+}
+
+function render(){
+  const alive=alivePlayers();
+  if(state.active>=alive.length) state.active=0;
+  els.queue.innerHTML="";
+  alive.forEach((p,i)=>{
+    const d=document.createElement("div");
+    d.className="pill";
+    if(i===state.active)d.classList.add("active");
+    if(state.vulnerable===p.id)d.classList.add("vulnerable");
+    d.textContent=p.name+(state.vulnerable===p.id?" ⚠":"");
+    els.queue.appendChild(d);
+  });
+  els.active.textContent=activePlayer()?.name||"–";
+  els.round.textContent=state.final?"FINALE":`Vorrunde ${state.round}`;
+  els.modeInfo.textContent=state.final?"Erster auf 3 Punkte gewinnt":`${alive.length} Personen im Spiel`;
+  if(state.final){
+    els.status.className="status ok";
+    els.status.textContent="Finale: Jede richtige Antwort gibt 1 Punkt. Falsch = Wechsel.";
+  } else if(state.vulnerable){
+    const v=state.players.find(p=>p.id===state.vulnerable);
+    els.status.className="status danger";
+    els.status.textContent=`BUMP-CHANCE: Mit einer richtigen Antwort fliegt ${v?.name}.`;
+  } else {
+    els.status.className="status";
+    els.status.textContent="Noch niemand wackelt.";
+  }
+  els.scores.innerHTML=state.players.map(p=>{
+    const score=state.final && state.finalScores[p.id]!=null ? ` – ${state.finalScores[p.id]} Punkte` : "";
+    return `<div style="padding:7px 0;opacity:${p.alive?1:.4}"><b>${escapeHtml(p.name)}</b>${p.alive?"":" – ausgeschieden"}${score}</div>`;
+  }).join("");
+  renderQuestion();
+}
+
+function correct(){
+  const p=activePlayer(); if(!p)return;
+  if(state.final){
+    state.finalScores[p.id]=(state.finalScores[p.id]||0)+1;
+    log(`✓ ${p.name} antwortet richtig (+1).`);
+    if(state.finalScores[p.id]>=3){ endGame(p); return; }
+    state.active=(state.active+1)%alivePlayers().length;
+    nextQuestion(true); render(); return;
+  }
+  if(state.vulnerable && state.vulnerable!==p.id){
+    const victim=state.players.find(x=>x.id===state.vulnerable);
+    log(`💥 ${p.name} antwortet richtig und bumpt ${victim.name} aus Runde ${state.round}.`);
+    victim.alive=false;
+    state.vulnerable=null;
+    afterElimination();
+    return;
+  }
+  log(`✓ ${p.name} antwortet richtig und bleibt sicher.`);
+  state.vulnerable=null;
+  state.active=(state.active+1)%alivePlayers().length;
+  nextQuestion(true); render();
+}
+
+function wrong(){
+  const p=activePlayer(); if(!p)return;
+  if(state.final){
+    log(`✕ ${p.name} antwortet falsch.`);
+    state.active=(state.active+1)%alivePlayers().length;
+    nextQuestion(true); render(); return;
+  }
+
+  if(state.vulnerable && state.vulnerable!==p.id){
+    const old=state.players.find(x=>x.id===state.vulnerable);
+    log(`✕ ${p.name} verpasst die Bump-Chance. ${old.name} ist wieder sicher; nun wackelt ${p.name}.`);
+    state.vulnerable=p.id;
+    state.active=(state.active+1)%alivePlayers().length;
+    nextQuestion(true);
+  }else{
+    log(`✕ ${p.name} antwortet falsch und wackelt. Die nächste Person bekommt dieselbe Frage.`);
+    state.vulnerable=p.id;
+    state.active=(state.active+1)%alivePlayers().length;
+    state.lockedQuestion=true;
+    nextQuestion(false);
+  }
+  render();
+}
+
+function afterElimination(){
+  const alive=alivePlayers();
+  if(alive.length<=2){
+    startFinal(); return;
+  }
+  state.round++;
+  state.players=shuffle(state.players.filter(p=>p.alive)).concat(state.players.filter(p=>!p.alive));
+  state.active=0; state.vulnerable=null;
+  log(`Vorrunde ${state.round} beginnt. Reihenfolge wurde neu gemischt.`);
+  nextQuestion(true); render();
+}
+
+function startFinal(){
+  state.final=true; state.active=0; state.vulnerable=null;
+  const alive=alivePlayers();
+  state.finalScores={}; alive.forEach(p=>state.finalScores[p.id]=0);
+  state.players=shuffle(state.players.filter(p=>p.alive)).concat(state.players.filter(p=>!p.alive));
+  log(`🏁 Finale: ${alive.map(p=>p.name).join(" vs. ")}. Erster auf 3 Punkte gewinnt.`);
+  nextQuestion(true); render();
+}
+function endGame(p){
+  els.game.classList.add("hidden"); els.winner.classList.remove("hidden");
+  $("#winnerText").textContent=`${p.name} gewinnt!`;
+  $("#winnerSub").textContent=`Nerdwissen siegt – mit 3 Punkten im Finale. Insgesamt wurden ${state.used.size} Fragen verwendet.`;
+}
+function log(t){
+  const d=document.createElement("div"); d.textContent=t;
+  els.log.prepend(d);
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])); }
+
+els.start.onclick=startGame;
+els.reveal.onclick=()=>els.answer.classList.toggle("hidden");
+els.correct.onclick=correct;
+els.wrong.onclick=wrong;
+els.skip.onclick=()=>{log(`↷ Frage übersprungen.`); state.vulnerable=null; nextQuestion(true); render();};
+$("#resetBtn").onclick=()=>location.reload();
+$("#againBtn").onclick=()=>location.reload();
+
+document.addEventListener("keydown",e=>{
+  if(els.game.classList.contains("hidden"))return;
+  if(e.key===" "){e.preventDefault();els.answer.classList.toggle("hidden")}
+  if(e.key==="ArrowRight") correct();
+  if(e.key==="ArrowLeft") wrong();
+});
+</script>
+</body>
+</html>
